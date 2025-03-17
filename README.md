@@ -20,9 +20,6 @@ MySQL (https://dev.mysql.com/downloads/)
 An IDE (I used Eclipse)
 
 
-```
-Give examples
-```
 
 ### Installing
 
