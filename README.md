@@ -11,6 +11,18 @@ A terminal-based inventory management system written in Java. It lets you create
 - Log4j2 logging to both the console and an `errors.log` file
 - Unit tests (DAO + domain classes) and integration tests (controllers, using Mockito) with JaCoCo coverage reporting
 
+## Project background
+
+Built solo as an agile-style project tracked on a Jira board ("IMSP"), scoped as an MVP and driven by user stories, e.g.:
+
+- *As a user, I want to add/view/update/delete a customer, item or order*
+- *As a user, I want to calculate the cost of an order*
+- *As a developer, I want to create relationships between my database tables*
+
+A risk assessment done at the start flagged the risks that shaped some of the design decisions below — most notably "user cannot use the application due to non-technical background" (mitigated by the simple, re-prompting CLI menus in `Domain`/`Action`) and "integration of Mockito fails" (mitigated by testing the controllers against mocked DAOs instead of a live database).
+
+Two user stories — linking an item to an order and calculating/deleting items within an order — were left in the backlog and never implemented; see [Planned schema](#planned-schema-not-implemented) below for what that would have looked like.
+
 ## Architecture
 
 The app follows a simple layered architecture: a CLI loop drives **Controllers**, which handle user I/O and delegate persistence to **DAOs**, which talk to MySQL via JDBC.
@@ -77,6 +89,36 @@ Three independent tables — there are currently no foreign keys linking them (a
 - `customers` (`id`, `first_name`, `surname`)
 - `items` (`id`, `items`, `inventory`)
 - `orders` (`id`, `price`, `amount`)
+
+### Planned schema (not implemented)
+
+The original design deck sketched a follow-up sprint that would link the three tables together (an order references items, items are ordered by customers) and add a few extra fields. None of this made it into the code — it's included here as a reference for anyone picking the project back up:
+
+```mermaid
+erDiagram
+    CUSTOMERS {
+        int id PK
+        string first_name
+        string surname
+        int age
+        string email
+    }
+    ITEMS {
+        int id PK
+        string item
+        int inventory
+        string warehouselocation
+    }
+    ORDERS {
+        int id PK
+        int amount
+        int price
+        date dateordered
+        string deliverypostcode
+    }
+    CUSTOMERS ||--o{ ITEMS : orders
+    ITEMS ||--o{ ORDERS : "included in"
+```
 
 ## Tech stack
 
@@ -205,9 +247,13 @@ Test the `CustomerDAO`, `ItemDAO` and `OrderDAO` classes, along with the `Custom
 
 Test the controller classes using Mockito to mock out the DAO layer, so they don't depend on the database.
 
+### Coverage
+
+JaCoCo/Eclipse coverage recorded during development sat around **67% overall**, unevenly spread across packages — DAO and controller tests were reasonably thorough, but `com.qa.ims` (the `IMS` menu loop itself) and `utils` had little to no coverage. Re-run `mvn test` (JaCoCo report lands in `target/site/jacoco/`) to see current numbers.
+
 ## Known limitations
 
-- **No foreign keys** — `orders`, `items` and `customers` aren't relationally linked, so an order can't be tied back to the item or customer it belongs to.
+- **No foreign keys** — `orders`, `items` and `customers` aren't relationally linked, so an order can't be tied back to the item or customer it belongs to. This was planned for a future sprint (see [Planned schema](#planned-schema-not-implemented)) but never built.
 - **Hardcoded DB credentials** — `db.properties` ships with `root`/`root` and isn't environment-configurable out of the box.
 - **Tests share the app's `ims` schema** — `src/test/resources/db.properties` points at the same `localhost:3306/ims` database as the app, and the DAO tests drop/recreate all three tables before every test. Point it at a separate schema (e.g. `ims_test`) if you don't want test runs touching your real data.
 - Declared **JRE 17** as a prerequisite, but the code is compiled for Java 8 (`maven.compiler.source/target`) — either works, but the two aren't aligned.
